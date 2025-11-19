@@ -10,7 +10,7 @@ import { mockRequirements, mockAgents, mockRepositories, mockBranches } from "@/
 import { toast } from "sonner";
 import { Plus, Trash2, FileText, Code, ArrowLeft, Send, Home, GitBranch, FolderGit2, Sparkles, CheckCircle2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import MentionInput, { MentionResource } from "@/components/MentionInput";
+import MentionInput, { MentionResource, UploadedFile } from "@/components/MentionInput";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Task {
@@ -38,6 +38,7 @@ export default function TaskDecomposePage() {
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [mentionedResources, setMentionedResources] = useState<MentionResource[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   useEffect(() => {
     if (!requirement && !customTask) {
@@ -85,6 +86,11 @@ export default function TaskDecomposePage() {
       }
       return prev;
     });
+  };
+
+  const handleFileUpload = (files: UploadedFile[]) => {
+    setUploadedFiles(prev => [...prev, ...files]);
+    toast.success(`已上传 ${files.length} 个文件`);
   };
 
   const addNewTask = () => {
@@ -173,22 +179,25 @@ export default function TaskDecomposePage() {
           </ScrollArea>
 
           <div className="border-t p-4">
-            <div className="flex gap-2">
-              <MentionInput
-                placeholder="描述您想要添加或修改的任务... (输入 @ 可引用资源)"
-                value={chatMessage}
-                onChange={setChatMessage}
-                onMentionSelect={handleMentionSelect}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                rows={3}
-                className="resize-none"
-              />
-              <Button size="icon" onClick={handleSendMessage}>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <MentionInput
+                  placeholder="描述您想要添加或修改的任务... (输入 @ 可引用资源)"
+                  value={chatMessage}
+                  onChange={setChatMessage}
+                  onMentionSelect={handleMentionSelect}
+                  onFileUpload={handleFileUpload}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+              <Button size="icon" onClick={handleSendMessage} className="shrink-0">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -329,6 +338,10 @@ export default function TaskDecomposePage() {
     </div>
   );
 }
+
+
+
+
 
 
 

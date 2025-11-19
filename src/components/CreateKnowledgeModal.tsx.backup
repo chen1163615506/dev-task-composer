@@ -1,0 +1,383 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  X,
+  Plus,
+  Trash2,
+  GitBranch,
+  Eye,
+  EyeOff,
+  Save,
+  Upload,
+  Link,
+  Loader2
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { KnowledgeItem } from "@/types/knowledge";
+import { isValidUrl, fetchUrlContent, detectUrlsInText } from "@/utils/linkToMarkdown";
+
+interface CreateKnowledgeModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (knowledge: Omit<KnowledgeItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
+}
+
+export default function CreateKnowledgeModal({ open, onClose, onSave }: CreateKnowledgeModalProps) {
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    type: "my" as "my" | "shared",
+    isPublic: false,
+    gitBound: false,
+    gitRepo: "",
+    tags: [] as string[]
+  });
+  const [newTag, setNewTag] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+
+  const handleSave = () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      return;
+    }
+
+    onSave({
+      title: formData.title,
+      content: formData.content,
+      type: formData.type,
+      isPublic: formData.isPublic,
+      gitBound: formData.gitBound,
+      gitRepo: formData.gitBound ? formData.gitRepo : undefined,
+      tags: formData.tags,
+      creator: {
+        id: "current-user",
+        name: "当前用户",
+        avatar: "/avatars/current.png"
+      }
+    });
+
+    // Reset form
+    setFormData({
+      title: "",
+      content: "",
+      type: "my",
+      isPublic: false,
+      gitBound: false,
+      gitRepo: "",
+      tags: []
+    });
+    setUrlInput("");
+    onClose();
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }));
+      setNewTag("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.name.endsWith('.md')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        setFormData(prev => ({
+          ...prev,
+          title: file.name.replace('.md', ''),
+          content: content
+        }));
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleUrlLoad = async () => {
+    const trimmedUrl = urlInput.trim();
+    console.log('handleUrlLoad called with:', trimmedUrl);
+
+    if (!trimmedUrl || !isValidUrl(trimmedUrl)) {
+      console.log('Invalid URL:', trimmedUrl);
+      alert('请输入有效的URL（以http://或https://开头）');
+      return;
+    }
+
+    console.log('Loading URL:', trimmedUrl);
+    setIsLoadingUrl(true);
+
+    try {
+      const { title, content } = await fetchUrlContent(trimmedUrl);
+      console.log('Fetched content:', { title, contentLength: content.length });
+
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          title: title || prev.title,
+          content: content
+        };
+        console.log('Setting form data:', { title: newData.title, contentLength: newData.content.length });
+        return newData;
+      });
+
+      setUrlInput("");
+      console.log('URL input cleared');
+
+    } catch (error) {
+      console.error('Error loading URL:', error);
+      // 显示错误提示给用户
+      alert(`获取链接内容失败: ${error.message}\n请检查网络连接或尝试其他链接`);
+    } finally {
+      setIsLoadingUrl(false);
+      console.log('Loading finished');
+    }
+  };
+
+  const handleUrlInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleUrlLoad();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>创建知识文件</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* 标题 */}
+          <div className="space-y-2">
+            <Label htmlFor="title">标题</Label>
+            <Input
+              id="title"
+              placeholder="输入知识文件标题"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            />
+          </div>
+
+          {/* 文件上传 */}
+          <div className="space-y-2">
+            <Label>上传文件 (.md)</Label>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+              <input
+                type="file"
+                accept=".md"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex flex-col items-center justify-center cursor-pointer"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                <span className="text-sm text-muted-foreground">
+                  点击上传 Markdown 文件
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* 链接输入 */}
+          <div className="space-y-2">
+            <Label>从链接创建</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="输入网页链接 (https://...)"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={handleUrlInputKeyDown}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleUrlLoad}
+                disabled={!urlInput.trim() || !isValidUrl(urlInput.trim()) || isLoadingUrl}
+              >
+                {isLoadingUrl ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setUrlInput("https://www.baidu.com");
+                }}
+              >
+                测试百度
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    title: "测试标题",
+                    content: "# 测试标题\n\n这是一个测试内容，用于验证功能是否正常工作。\n\n- 项目1\n- 项目2\n- 项目3"
+                  }));
+                }}
+              >
+                测试填充
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              输入网页链接，系统将自动获取内容并转换为 Markdown 格式
+            </p>
+          </div>
+
+          {/* 内容 */}
+          <div className="space-y-2">
+            <Label htmlFor="content">内容</Label>
+            <Textarea
+              id="content"
+              placeholder="输入知识内容 (支持 Markdown 格式)"
+              value={formData.content}
+              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              rows={10}
+              className="resize-none font-mono text-sm"
+            />
+          </div>
+
+          {/* 类型选择 */}
+          <div className="space-y-2">
+            <Label>知识类型</Label>
+            <Select value={formData.type} onValueChange={(value: "my" | "shared") => setFormData(prev => ({ ...prev, type: value }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="my">我的知识</SelectItem>
+                <SelectItem value="shared">共享知识</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Git 绑定和公开设置 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>绑定 Git 仓库</Label>
+                <p className="text-sm text-muted-foreground">
+                  绑定后可以与团队成员共享
+                </p>
+              </div>
+              <Switch
+                checked={formData.gitBound}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, gitBound: checked }))}
+              />
+            </div>
+
+            {formData.gitBound && (
+              <div className="space-y-2 ml-4">
+                <Label htmlFor="gitRepo">Git 仓库</Label>
+                <Input
+                  id="gitRepo"
+                  placeholder="输入 Git 仓库地址"
+                  value={formData.gitRepo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gitRepo: e.target.value }))}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>公开设置</Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.gitBound ? "公开后，有 Git 权限的人都能看到" : "公开后，所有人都能看到"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.isPublic}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublic: checked }))}
+                />
+                {formData.isPublic ? (
+                  <Eye className="h-4 w-4 text-green-500" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 标签 */}
+          <div className="space-y-2">
+            <Label>标签</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="添加标签"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTag();
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={addTag}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {formData.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {formData.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={handleSave} disabled={!formData.title.trim() || !formData.content.trim()}>
+            <Save className="h-4 w-4 mr-1" />
+            保存
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

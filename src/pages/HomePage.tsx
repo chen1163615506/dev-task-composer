@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { mockRepositories, mockBranches, mockAgents } from "@/data/mockData";
 import { toast } from "sonner";
-import { GitBranch, FolderGit2, Sparkles, Send } from "lucide-react";
+import { GitBranch, FolderGit2, Sparkles, Send, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTaskStore } from "@/store/taskStore";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -320,6 +320,9 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+
 
 
 

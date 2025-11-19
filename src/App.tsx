@@ -7,6 +7,8 @@ import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import TaskDecomposePage from "./pages/TaskDecomposePage";
+import TestMentionInput from "./pages/TestMentionInput";
+import TestLinkFeature from "./pages/TestLinkFeature";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,8 @@ const App = () => (
           <Route path="/" element={<Layout><HomePage /></Layout>} />
           <Route path="/task/:taskId" element={<Layout><TaskDetailPage /></Layout>} />
           <Route path="/decompose" element={<TaskDecomposePage />} />
+          <Route path="/test-mention" element={<Layout><TestMentionInput /></Layout>} />
+          <Route path="/test-link" element={<Layout><TestLinkFeature /></Layout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -30,4 +34,11 @@ const App = () => (
 );
 
 export default App;
+
+
+
+
+
+
+
 

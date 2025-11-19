@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, FileText, CheckCircle, Clock, XCircle, Loader2, Plus, Home } from "lucide-react";
+import { ChevronRight, FileText, CheckCircle, Clock, XCircle, Loader2, Plus, Home, Book } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { mockRequirements, mockSingleTasks, Task } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { useTaskStore } from "@/store/taskStore";
+import { useKnowledge } from "./Layout";
 
 const StatusIcon = ({ status }: { status: Task['status'] }) => {
   switch (status) {
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const tasks = useTaskStore((state) => state.tasks);
   const [expandedRequirements, setExpandedRequirements] = useState<Set<string>>(new Set(['1']));
+  const { showKnowledgeSidebar, setShowKnowledgeSidebar } = useKnowledge();
 
   const toggleRequirement = (id: string) => {
     const newExpanded = new Set(expandedRequirements);
@@ -68,10 +70,22 @@ export function AppSidebar() {
         </Button>
       </SidebarHeader>
       <SidebarContent className="bg-sidebar">
-        <div className="p-2">
+        <div className="p-2 space-y-2">
           <Button
             className={cn(
-              "w-full gap-2",
+              "w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white",
+              collapsed && "px-2",
+              showKnowledgeSidebar && "bg-blue-700"
+            )}
+            onClick={() => setShowKnowledgeSidebar(!showKnowledgeSidebar)}
+            data-knowledge-button
+          >
+            <Book className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>知识库</span>}
+          </Button>
+          <Button
+            className={cn(
+              "w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white",
               collapsed && "px-2"
             )}
             onClick={handleNewTask}
@@ -192,6 +206,15 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

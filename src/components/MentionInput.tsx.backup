@@ -4,11 +4,10 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { FileText, Book, Wrench, Database, GitBranch, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mockRequirements } from "@/data/mockData";
-import { mockMyKnowledge, mockSharedKnowledge, mockMarketKnowledge, getKnowledgeIcon } from "@/data/mockKnowledge";
 
 export interface MentionResource {
   id: string;
-  type: 'requirement' | 'knowledge' | 'tool';
+  type: 'requirement' | 'file' | 'tool';
   title: string;
   description?: string;
   icon?: React.ReactNode;
@@ -46,7 +45,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
   const [mentionSearch, setMentionSearch] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [activeTab, setActiveTab] = useState<'all' | 'requirement' | 'knowledge' | 'tool'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'requirement' | 'file' | 'tool'>('all');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editableRef = useRef<HTMLDivElement>(null);
   const [selectedResources, setSelectedResources] = useState<MentionResource[]>([]);
@@ -83,23 +82,29 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     data: req,
   }));
 
-  // 合并所有知识数据
-  const allKnowledge = [
-    ...mockMyKnowledge,
-    ...mockSharedKnowledge.created,
-    ...mockSharedKnowledge.added,
-    ...mockMarketKnowledge
+  const fileResources: MentionResource[] = [
+    {
+      id: 'file-1',
+      type: 'file',
+      title: '开启你和AI共用的收藏夹.md',
+      category: '收藏夹文件',
+      icon: <FileText className="h-5 w-5 text-blue-500" />,
+    },
+    {
+      id: 'file-2',
+      type: 'file',
+      title: '技术架构设计文档',
+      category: '收藏夹文件',
+      icon: <FileText className="h-5 w-5 text-blue-500" />,
+    },
+    {
+      id: 'file-3',
+      type: 'file',
+      title: 'React 最佳实践',
+      category: '收藏夹文件',
+      icon: <Book className="h-5 w-5 text-green-500" />,
+    },
   ];
-
-  const knowledgeResources: MentionResource[] = allKnowledge.map(knowledge => ({
-    id: knowledge.id,
-    type: 'knowledge' as const,
-    title: knowledge.title,
-    description: knowledge.content.slice(0, 100) + '...',
-    category: knowledge.type === 'my' ? '我的知识' : knowledge.type === 'shared' ? '共享知识' : '知识市场',
-    icon: getKnowledgeIcon(knowledge),
-    data: knowledge,
-  }));
 
   const toolResources: MentionResource[] = [
     {
@@ -138,7 +143,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
 
   const mockResources: MentionResource[] = [
     ...requirementResources,
-    ...knowledgeResources,
+    ...fileResources,
     ...toolResources,
   ];
 
@@ -274,7 +279,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       requirement: '需求',
-      knowledge: '知识',
+      file: '文件',
       tool: '工具',
     };
     return labels[type] || type;
@@ -283,10 +288,10 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       requirement: 'bg-purple-500/10 text-purple-600 border-purple-200',
-      knowledge: 'bg-blue-500/10 text-blue-600 border-blue-200',
+      file: 'bg-blue-500/10 text-blue-600 border-blue-200',
       tool: 'bg-orange-500/10 text-orange-600 border-orange-200',
     };
-    return colors[type] || colors.knowledge;
+    return colors[type] || colors.file;
   };
 
   const groupedResources = filteredResources.reduce((acc, resource) => {
@@ -298,7 +303,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     return acc;
   }, {} as Record<string, MentionResource[]>);
 
-  const tabs = ['all', 'requirement', 'knowledge', 'tool'] as const;
+  const tabs = ['all', 'requirement', 'file', 'tool'] as const;
 
   const renderTextWithMentions = useMemo(() => {
     if (!value) return '';
@@ -487,45 +492,43 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
 
   return (
     <div className="relative w-full">
-      <div className="relative">
-        {useRichText ? (
-          <div className="relative">
-            {!value && placeholder && (
-              <div className="absolute top-2 left-3 text-sm text-muted-foreground pointer-events-none">
-                {placeholder}
-              </div>
-            )}
-            <div
-              ref={editableRef}
-              contentEditable={!disabled}
-              onInput={handleEditableInput}
-              onCompositionStart={handleCompositionStart}
-              onCompositionEnd={handleCompositionEnd}
-              onKeyDown={handleKeyDown}
-              className={cn(
-                "min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                "disabled:cursor-not-allowed disabled:opacity-50",
-                "whitespace-pre-wrap break-words",
-                className
-              )}
-              style={{ minHeight: `${rows * 24}px` }}
-              dangerouslySetInnerHTML={{ __html: renderTextWithMentions }}
-            />
-          </div>
-        ) : (
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleTextChange}
+      {useRichText ? (
+        <div className="relative">
+          {!value && placeholder && (
+            <div className="absolute top-2 left-3 text-sm text-muted-foreground pointer-events-none">
+              {placeholder}
+            </div>
+          )}
+          <div
+            ref={editableRef}
+            contentEditable={!disabled}
+            onInput={handleEditableInput}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            rows={rows}
-            className={cn("resize-none", className)}
-            disabled={disabled}
+            className={cn(
+              "min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              "whitespace-pre-wrap break-words",
+              className
+            )}
+            style={{ minHeight: `${rows * 24}px` }}
+            dangerouslySetInnerHTML={{ __html: renderTextWithMentions }}
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          rows={rows}
+          className={cn("resize-none", className)}
+          disabled={disabled}
+        />
+      )}
 
       {showMentionMenu && (
         <div
@@ -538,7 +541,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
           <div className="w-[500px] bg-popover border rounded-lg shadow-lg overflow-hidden">
             <Command shouldFilter={false}>
               <CommandInput
-                placeholder="搜索需求/知识/工具"
+                placeholder="搜索需求/文件/工具"
                 value={mentionSearch}
                 onValueChange={setMentionSearch}
                 className="border-b"
@@ -579,19 +582,19 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
                 </button>
                 <button
                   onClick={() => {
-                    setActiveTab('knowledge');
+                    setActiveTab('file');
                     setHighlightedTabIndex(2);
                     setHighlightedIndex(0);
                   }}
                   className={cn(
                     "px-4 py-1.5 text-sm rounded-md transition-colors",
-                    activeTab === 'knowledge'
+                    activeTab === 'file'
                       ? "bg-background shadow-sm font-medium"
                       : "text-muted-foreground hover:text-foreground",
                     highlightedTabIndex === 2 && showMentionMenu && "ring-2 ring-primary"
                   )}
                 >
-                  知识
+                  文件
                 </button>
                 <button
                   onClick={() => {
@@ -658,23 +661,6 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
 MentionInput.displayName = "MentionInput";
 
 export default MentionInput;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
